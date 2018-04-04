@@ -1,0 +1,72 @@
+version: '2'
+services:
+  harbor-setupwrapper:
+    image: randrades/harbor-setupwrapper
+    container_name: harbor-setupwrapper
+    environment:
+      - HARBORHOSTNAME=registry.local
+      - HARBOR_ADMIN_PASSWORD=Digicade%Admin001
+    volumes:
+      - /harbor/config/log/:/harbor/common/config/log/:z
+      - /harbor/config/registry/:/harbor/common/config/registry/:z
+      - /harbor/entrypoint/:/harbor/entrypoint/:z
+      - /harbor/config/db/:/harbor/common/config/db/:z
+    command: ["/harbor/harbor-setupwrapper.sh"]
+    network_mode: "none"
+  log:
+    image: vmware/harbor-log:v1.4.0
+    container_name: harbor-log 
+    restart: always
+    volumes:
+      - /var/log/harbor/:/var/log/docker/:z
+      - /harbor/config/log/:/etc/logrotate.d/:z
+    ports:
+      - 127.0.0.1:1514:10514
+    depends_on:
+      - harbor-setupwrapper
+    networks:
+      - harbor
+  registry:
+    image: vmware/registry-photon:v2.6.2-v1.4.0
+    container_name: registry
+    restart: always
+    volumes:
+      - /harbor/data/registry:/storage:z
+      - /harbor/config/registry/:/etc/registry/:z
+    networks:
+      - harbor
+    environment:
+      - GODEBUG=netdns=cgo
+    command:
+      ["serve", "/etc/registry/config.yml"]
+    depends_on:
+      - harbor-setupwrapper
+      - log
+    logging:
+      driver: "syslog"
+      options:  
+        syslog-address: "tcp://127.0.0.1:1514"
+        tag: "registry"
+  mysql:
+    image: vmware/harbor-db:v1.4.0
+    container_name: harbor-db
+    restart: always
+    volumes:
+      - /harbor/data/database:/var/lib/mysql:z
+      - /harbor/entrypoint/:/harbor/entrypoint:z
+      - /harbor/config/db/:/harbor/config/db/:z
+    networks:
+      - harbor
+    entrypoint: ["/bin/sh", "-c"]
+    command: ["/harbor/entrypoint/harbor-entrypoint-db.sh"]
+    depends_on:
+      - harbor-setupwrapper
+      - log
+    logging:
+      driver: "syslog"
+      options:  
+        syslog-address: "tcp://127.0.0.1:1514"
+        tag: "mysql"
+networks:
+  harbor:
+    external: false
