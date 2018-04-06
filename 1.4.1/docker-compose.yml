@@ -7,10 +7,8 @@ services:
       - HARBORHOSTNAME=${harborhostname}
       - HARBOR_ADMIN_PASSWORD=${harbor_admin_password}
       - UI_URL_PROTOCOL=${protocol}
-      #- HARBORHOSTNAME=harbor.digicade.com.br:443
-      #- HARBOR_ADMIN_PASSWORD=Digicade%Admin001
-      #- SSL_CERT=/certs/server.crt
-      #- SSL_CERT_KEY=/certs/server.key
+      - SSL_CERT=${ssl_cert}
+      - SSL_CERT_KEY=${ssl_cert_key}
     volumes:
       - vl-harbor-config-log:/config-log
       - vl-harbor-config-registry:/config-registry
@@ -22,6 +20,7 @@ services:
       - vl-harbor-config-jobservice:/config-jobservice
       - vl-harbor-data-psc:/data/psc
       - vl-harbor-data-config:/data/config
+      - vl-harbor-config-ca:/data/cert
     command: ["/harbor/harbor-setupwrapper.sh"]
     network_mode: "none"
     labels:
@@ -179,9 +178,11 @@ services:
     restart: always
     volumes:
       - vl-harbor-config-nginx:/etc/nginx:z
+      - vl-harbor-config-ca:/etc/nginx/cert/:z
     networks:
       - harbor
     ports:
+      - 80:80
       - 443:443
     depends_on:
       - mysql
@@ -203,40 +204,43 @@ networks:
 volumes:
   vl-harbor-config-log:
     #external: true
-    #driver: ${volumedriver}
+    driver: ${volumedriver}
   vl-harbor-config-registry:
     #external: true
-    #driver: ${volumedriver}
+    driver: ${volumedriver}
   vl-harbor-data-registry:
     #external: true
-    #driver: ${volumedriver}
+    driver: ${volumedriver}
   vl-harbor-data-db:
     #external: true
-    #driver: ${volumedriver}
+    driver: ${volumedriver}
   vl-harbor-config-db:
     #external: true
-    #driver: ${volumedriver}
+    driver: ${volumedriver}
   vl-harbor-config-adminserver:
     #external: true
-    #driver: ${volumedriver}
+    driver: ${volumedriver}
   vl-harbor-data:
     #external: true
-    #driver: ${volumedriver}
+    driver: ${volumedriver}
   vl-harbor-config-ui:
     #external: true
-    #driver: ${volumedriver}
+    driver: ${volumedriver}
   vl-harbor-config-nginx:
     #external: true
-    #driver: ${volumedriver}
+    driver: ${volumedriver}
   vl-harbor-config-jobservice:
     #external: true
-    #driver: ${volumedriver}
+    driver: ${volumedriver}
   vl-harbor-data-job_logs:
     #external: true
-    #driver: ${volumedriver}
+    driver: ${volumedriver}
   vl-harbor-data-config:
     #external: true
-    #driver: ${volumedriver}
+    driver: ${volumedriver}
   vl-harbor-data-psc:
     #external: true
-    #driver: ${volumedriver}
+    driver: ${volumedriver}
+  vl-harbor-config-ca:
+    #external: true
+    driver: ${volumedriver}
