@@ -1,5 +1,10 @@
 #!/bin/bash
-set -e
+
+#############################################################
+## 	              Massimo Re Ferrè - IT20.INFO             ##
+#############################################################
+
+
 
 #############################################################
 ## 	             Preparing the harbor.cfg file             ##
@@ -39,7 +44,6 @@ if [ ${PROJECT_CREATION_RESTRICTION} ]; then sed -i '/project_creation_restricti
 if [ ${SSL_CERT} ]; then sed -i '/ssl_cert = /data/cert/server.crt/c\ssl_cert = '${SSL_CERT}'' harbor.cfg; fi
 if [ ${SSL_CERT_KEY} ]; then sed -i '/ssl_cert_key = /data/cert/server.key/c\ssl_cert_key = '${SSL_CERT_KEY}'' harbor.cfg; fi
 
-
 #############################################################
 ## 	             Preparing the config files                ##
 ##             using the standard prepare script           ##
@@ -52,31 +56,61 @@ if [ ${SSL_CERT_KEY} ]; then sed -i '/ssl_cert_key = /data/cert/server.key/c\ssl
 ##      to be exported to the application containers       ##
 #############################################################
 
-if [ ! -d "/harbor/config" ]; then
-  mkdir -p /harbor/config
+
+if [ ! -d "/etc/registry" ]; then
+  mkdir /etc/registry
 fi
 
-if [ ! -d "/harbor/data" ]; then
-  mkdir -p /harbor/data
+if [ ! -d "/etc/ui" ]; then
+  mkdir /etc/ui
 fi
 
-if [ ! -d "/harbor/entrypoint" ]; then
-  mkdir -p /harbor/entrypoint
+if [ ! -d "/etc/jobservice" ]; then
+  mkdir /etc/jobservice
 fi
 
-cp -R /harbor/common/config/ /harbor/
-cp -R /data/ /harbor/
+if [ ! -d "/etc/nginx" ]; then
+  mkdir /etc/nginx
+fi
 
-chmod -R 775 /harbor
+if [ ! -d "/configdb" ]; then
+  mkdir /configdb
+fi
 
-cp /harbor/harbor-entrypoint-log.sh /harbor/entrypoint/harbor-entrypoint-log.sh
-cp /harbor/harbor-entrypoint-registry.sh /harbor/entrypoint/harbor-entrypoint-registry.sh
-cp /harbor/harbor-entrypoint-db.sh /harbor/entrypoint/harbor-entrypoint-db.sh
-cp /harbor/harbor-entrypoint-adminserver.sh /harbor/entrypoint/harbor-entrypoint-adminserver.sh
+if [ ! -d "/configui" ]; then
+  mkdir /configui
+fi
 
-chmod +x /harbor/entrypoint/harbor-entrypoint-log.sh \
-    /harbor/entrypoint/harbor-entrypoint-registry.sh \
-    /harbor/entrypoint/harbor-entrypoint-db.sh \
-    /harbor/entrypoint/harbor-entrypoint-adminserver.sh
+if [ ! -d "/configjobservice" ]; then
+  mkdir /configjobservice
+fi
 
-tail -f /dev/null
+if [ ! -d "/configadminserver" ]; then
+  mkdir /configadminserver
+fi
+
+cp -R ./common/config/registry /etc
+cp ./common/config/ui/app.conf /etc/ui/app.conf
+cp ./common/config/ui/private_key.pem /etc/ui/private_key.pem
+cp ./common/config/jobservice/app.conf /etc/jobservice/app.conf
+cp -R ./common/config/nginx /etc
+
+cp ./common/config/db/env /configdb/env
+cp ./common/config/ui/env /configui/env
+cp ./common/config/jobservice/env /configjobservice/env
+cp ./common/config/adminserver/env /configadminserver/env
+
+cp /harbor/entrypointdb.sh /configdb
+cp /harbor/entrypointui.sh /configui/entrypointui.sh
+cp /harbor/entrypointjobservice.sh /configjobservice/entrypointjobservice.sh 
+cp /harbor/entrypointadminserver.sh /configadminserver/entrypointadminserver.sh 
+
+
+chmod +x /configdb/entrypointdb.sh \
+		 /configui/entrypointui.sh \
+		 /configjobservice/entrypointjobservice.sh \
+     /configadminserver/entrypointadminserver.sh 
+
+
+
+

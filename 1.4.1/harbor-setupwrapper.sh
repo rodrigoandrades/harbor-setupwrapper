@@ -1,5 +1,4 @@
 #!/bin/bash
-set -e
 
 #############################################################
 ## 	             Preparing the harbor.cfg file             ##
@@ -36,8 +35,8 @@ if [ ${CRT_ORGANIZATIONALUNIT} ]; then sed -i '/crt_organizationalunit = organiz
 if [ ${CRT_COMMONNAME} ]; then sed -i '/crt_commonname = example.com/c\crt_commonname = '${CRT_COMMONNAME}'' harbor.cfg; fi
 if [ ${CRT_EMAIL} ]; then sed -i '/crt_email = example@example.com/c\crt_email = '${CRT_EMAIL}'' harbor.cfg; fi
 if [ ${PROJECT_CREATION_RESTRICTION} ]; then sed -i '/project_creation_restriction = everyone/c\project_creation_restriction '${PROJECT_CREATION_RESTRICTION}'' harbor.cfg; fi
-if [ ${SSL_CERT} ]; then sed -i '/ssl_cert = /data/cert/server.crt/c\ssl_cert = '${SSL_CERT}'' harbor.cfg; fi
-if [ ${SSL_CERT_KEY} ]; then sed -i '/ssl_cert_key = /data/cert/server.key/c\ssl_cert_key = '${SSL_CERT_KEY}'' harbor.cfg; fi
+if [ ${SSL_CERT} ]; then sed -i '/ssl_cert = \/data\/cert\/server.crt/c\ssl_cert = '${SSL_CERT}'' harbor.cfg; fi
+if [ ${SSL_CERT_KEY} ]; then sed -i '/ssl_cert_key = \/data\/cert\/server.key/c\ssl_cert_key = '${SSL_CERT_KEY}'' harbor.cfg; fi
 
 
 #############################################################
@@ -52,31 +51,51 @@ if [ ${SSL_CERT_KEY} ]; then sed -i '/ssl_cert_key = /data/cert/server.key/c\ssl
 ##      to be exported to the application containers       ##
 #############################################################
 
-if [ ! -d "/harbor/config" ]; then
-  mkdir -p /harbor/config
+
+if [ ! -d "/config-adminserver" ]; then
+  mkdir /config-adminserver
 fi
 
-if [ ! -d "/harbor/data" ]; then
-  mkdir -p /harbor/data
+if [ ! -d "/config-db" ]; then
+  mkdir /config-db
 fi
 
-if [ ! -d "/harbor/entrypoint" ]; then
-  mkdir -p /harbor/entrypoint
+if [ ! -d "/config-jobservice" ]; then
+  mkdir /config-jobservice
 fi
 
-cp -R /harbor/common/config/ /harbor/
-cp -R /data/ /harbor/
+if [ ! -d "/config-log" ]; then
+  mkdir /config-log
+fi
 
-chmod -R 775 /harbor
+if [ ! -d "/config-nginx" ]; then
+  mkdir /config-nginx
+fi
 
-cp /harbor/harbor-entrypoint-log.sh /harbor/entrypoint/harbor-entrypoint-log.sh
-cp /harbor/harbor-entrypoint-registry.sh /harbor/entrypoint/harbor-entrypoint-registry.sh
-cp /harbor/harbor-entrypoint-db.sh /harbor/entrypoint/harbor-entrypoint-db.sh
-cp /harbor/harbor-entrypoint-adminserver.sh /harbor/entrypoint/harbor-entrypoint-adminserver.sh
+if [ ! -d "/config-registry" ]; then
+  mkdir /config-registry
+fi
 
-chmod +x /harbor/entrypoint/harbor-entrypoint-log.sh \
-    /harbor/entrypoint/harbor-entrypoint-registry.sh \
-    /harbor/entrypoint/harbor-entrypoint-db.sh \
-    /harbor/entrypoint/harbor-entrypoint-adminserver.sh
+if [ ! -d "/config-ui" ]; then
+  mkdir /config-ui
+fi
 
-tail -f /dev/null
+
+cp -R ./common/config/adminserver/* /config-adminserver
+cp -R ./common/config/db/* /config-db
+cp -R ./common/config/jobservice/* /config-jobservice
+cp -R ./common/config/log/* /config-log
+cp -R ./common/config/nginx/* /config-nginx
+cp -R ./common/config/registry/* /config-registry
+cp -R ./common/config/ui/* /config-ui
+
+cp /harbor/entrypointdb.sh /config-db/entrypointdb.sh
+cp /harbor/entrypointui.sh /config-ui/entrypointui.sh
+cp /harbor/entrypointjobservice.sh /config-jobservice/entrypointjobservice.sh
+cp /harbor/entrypointadminserver.sh /config-adminserver/entrypointadminserver.sh
+
+
+chmod +x /config-db/entrypointdb.sh \
+		 /config-ui/entrypointui.sh \
+		 /config-jobservice/entrypointjobservice.sh \
+     /config-adminserver/entrypointadminserver.sh

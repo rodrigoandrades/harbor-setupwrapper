@@ -1,33 +1,37 @@
 version: '2'
 services:
   harbor-setupwrapper:
-    image: randrades/harbor-setupwrapper
+    image: randrades/harbor-setupwrapper:1.4.0
     container_name: harbor-setupwrapper
     environment:
-      - HARBORHOSTNAME=registry.local
+      #- HARBORHOSTNAME=${harborhostname}
+      #- HARBOR_ADMIN_PASSWORD=${harbor_admin_password}
+      - HARBORHOSTNAME=reg.local
       - HARBOR_ADMIN_PASSWORD=Digicade%Admin001
     volumes:
-      - /harbor/data:/data:z
-      - /harbor/config/nginx:/harbor/common/config/nginx
-      - /harbor/config/adminserver:/harbor/common/config/adminserver
-      - /harbor/config/ui:/harbor/common/config/ui
-      - /harbor/config/db:/harbor/common/config/db
-      - /harbor/config/jobservice:/harbor/common/config/jobservice
-      - /harbor/config/log:/harbor/common/config/log
-      - /harbor/config/registry:/harbor/common/config/registry
+      - vl-harbor-config-adminserver:/config-adminserver
+      - vl-harbor-config-db:/config-db
+      - vl-harbor-config-jobservice:/config-jobservice
+      - vl-harbor-config-log:/config-log
+      - vl-harbor-config-nginx:/config-nginx
+      - vl-harbor-config-registry:/config-registry
+      - vl-harbor-config-ui:/config-ui
     command: ["/harbor/harbor-setupwrapper.sh"]
     network_mode: "none"
+    labels:
+      #io.rancher.scheduler.affinity:host_label: ${harborhostlabel}
+      io.rancher.scheduler.affinity:host_label: reg.local
+      io.rancher.container.hostname_override: container_name
+      io.rancher.container.start_once: 'true'
   log:
     image: vmware/harbor-log:v1.4.0
     container_name: harbor-log 
     restart: always
     volumes:
       - /var/log/harbor/:/var/log/docker/:z
-      - /harbor/config/log/:/etc/logrotate.d/:z
+      - vl-harbor-configlog:/etc/logrotate.d/:z
     ports:
       - 127.0.0.1:1514:10514
-    depends_on:
-      - harbor-setupwrapper
     networks:
       - harbor
   registry:
@@ -35,8 +39,8 @@ services:
     container_name: registry
     restart: always
     volumes:
-      - /harbor/data/registry:/storage:z
-      - /harbor/config/registry/:/etc/registry/:z
+      - vl-harbor-data-registry:/storage:z
+      - vl-harbor-etcregistry:/etc/registry/:z
     networks:
       - harbor
     environment:
@@ -44,7 +48,6 @@ services:
     command:
       ["serve", "/etc/registry/config.yml"]
     depends_on:
-      - harbor-setupwrapper
       - log
     logging:
       driver: "syslog"
@@ -56,13 +59,10 @@ services:
     container_name: harbor-db
     restart: always
     volumes:
-      - /harbor/data/database:/var/lib/mysql:z
+      - vl-harbor-data-database:/var/lib/mysql:z
     networks:
       - harbor
-    env_file:
-      - /harbor/config/db/env
     depends_on:
-      - harbor-setupwrapper
       - log
     logging:
       driver: "syslog"
@@ -72,20 +72,14 @@ services:
   adminserver:
     image: vmware/harbor-adminserver:v1.4.0
     container_name: harbor-adminserver
-    env_file:
-      - /harbor/config/adminserver/env
     restart: always
     volumes:
-      - /harbor/data/config/:/etc/adminserver/config/:z
-      - /harbor/data/secretkey:/etc/adminserver/key:z
-      - /harbor/data/:/data/:z
-      - /harbor/config/adminserver:/harbor/config/adminserver
-    volumes_from:
-      - harbor-setupwrapper
+      - vl-harbor-data-config:/etc/adminserver/config/:z
+      - /data/secretkey:/etc/adminserver/key:z
+      - /data/:/data/:z
     networks:
       - harbor
     depends_on:
-      - harbor-setupwrapper
       - log
     logging:
       driver: "syslog"
@@ -95,20 +89,17 @@ services:
   ui:
     image: vmware/harbor-ui:v1.4.0
     container_name: harbor-ui
-    env_file:
-      - /harbor/config/ui/env
     restart: always
     volumes:
-      - /harbor/config/ui/app.conf:/etc/ui/app.conf:z
-      - /harbor/config/ui/private_key.pem:/etc/ui/private_key.pem:z
-      - /harbor/config/ui/certificates/:/etc/ui/certificates/:z
-      - /harbor/data/secretkey:/etc/ui/key:z
-      - /harbor/data/ca_download/:/etc/ui/ca/:z
-      - /harbor/data/psc/:/etc/ui/token/:z
+      - ./common/config/ui/app.conf:/etc/ui/app.conf:z
+      - ./common/config/ui/private_key.pem:/etc/ui/private_key.pem:z
+      - ./common/config/ui/certificates/:/etc/ui/certificates/:z
+      - /data/secretkey:/etc/ui/key:z
+      - /data/ca_download/:/etc/ui/ca/:z
+      - /data/psc/:/etc/ui/token/:z
     networks:
       - harbor
     depends_on:
-      - harbor-setupwrapper
       - log
       - adminserver
       - registry
@@ -120,17 +111,14 @@ services:
   jobservice:
     image: vmware/harbor-jobservice:v1.4.0
     container_name: harbor-jobservice
-    env_file:
-      - /harbor/config/jobservice/env
     restart: always
     volumes:
-      - /harbor/data/job_logs:/var/log/jobs:z
-      - /harbor/config/jobservice/app.conf:/etc/jobservice/app.conf:z
-      - /harbor/data/secretkey:/etc/jobservice/key:z
+      - /data/job_logs:/var/log/jobs:z
+      - ./common/config/jobservice/app.conf:/etc/jobservice/app.conf:z
+      - /data/secretkey:/etc/jobservice/key:z
     networks:
       - harbor
     depends_on:
-      - harbor-setupwrapper
       - ui
       - adminserver
     logging:
@@ -143,7 +131,7 @@ services:
     container_name: nginx
     restart: always
     volumes:
-      - /harbor/config/nginx:/etc/nginx:z
+      - ./common/config/nginx:/etc/nginx:z
     networks:
       - harbor
     ports:
@@ -151,7 +139,6 @@ services:
       - 443:443
       - 4443:4443
     depends_on:
-      - harbor-setupwrapper
       - mysql
       - registry
       - ui
@@ -164,17 +151,28 @@ services:
 networks:
   harbor:
     external: false
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+volumes:
+  vl-harbor-etcjobservice:
+    #external: true
+    #driver: ${volumedriver}
+  vl-harbor-config-adminserver:
+    #external: true
+    #driver: ${volumedriver}
+  vl-harbor-config-db:
+    #external: true
+    #driver: ${volumedriver}
+  vl-harbor-config-jobservice:
+    #external: true
+    #driver: ${volumedriver}
+  vl-harbor-config-log:
+    #external: true
+    #driver: ${volumedriver}
+  vl-harbor-config-nginx:
+    #external: true
+    #driver: ${volumedriver}
+  vl-harbor-config-registry:
+    #external: true
+    #driver: ${volumedriver}
+  vl-harbor-config-ui:
+    #external: true
+    #driver: ${volumedriver}

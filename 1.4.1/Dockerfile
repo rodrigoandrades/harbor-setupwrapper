@@ -11,9 +11,9 @@ WORKDIR /harbor
 
 ADD ./harbor-setupwrapper.sh .
 
-ADD ./harbor-entrypoint-log.sh .
-ADD ./harbor-entrypoint-registry.sh .
-ADD ./harbor-entrypoint-db.sh .
-ADD ./harbor-entrypoint-adminserver.sh .
+ADD ./entrypointdb.sh .
+ADD ./entrypointui.sh .
+ADD ./entrypointjobservice.sh .
+ADD ./entrypointadminserver.sh .
 
 RUN chmod +x harbor-setupwrapper.sh
